@@ -1,7 +1,7 @@
 # juiz_examples_cpp
 
 ロボット・IoT 向けミドルウェア [juiz](https://github.com/OpenJUIZ/juiz) の C++ 版サンプル集です。
-`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.0.9 を使います。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz のリポジトリから自動で取得するので、juiz のソースを手元に用意する必要はありません。
+`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.0.10 を使います。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz のリポジトリから自動で取得するので、juiz のソースを手元に用意する必要はありません。
 
 Rust 版は [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust)、Python 版は [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) にあります。
 
@@ -160,9 +160,13 @@ juiz container-process call "http://127.0.0.1:8000/container_process/get0::examp
 juiz -f example_component.conf -d
 juiz process call "http://127.0.0.1:8000/process/proc0::example_component_cpp_increment" '{"arg1": 1}' -p
 # => CapsulePtr((value:Value(2), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/increment0::example_component_cpp_container_increment:container0" '{"arg1": 5}' -p
+# => CapsulePtr((value:Value(105), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/get0::example_component_cpp_container_get:container0" '{}' -p
+# => CapsulePtr((value:Value(105), option: []))
 ```
 
-juiz 0.0.9 では Component に入れた Container を作ると起動時にエラーになるので (Rust 版の Component でも同じ)、`example_component.conf` では Container の部分をコメントアウトしています。
+Component に入れた Container を設定ファイルの `containers` で作るには juiz 0.0.10 以降が必要です (0.0.9 では起動時にエラーになります)。
 
 ## 構成
 
@@ -187,10 +191,9 @@ Container は `add_juiz_container()`、ContainerProcess は `add_juiz_container_
 
 ## juiz の版について
 
-CMake が取得する juiz の版は `JUIZ_GIT_TAG` で決まります。既定値は、v0.0.9 に C++ の Container 生成関数の修正を加えたコミットです (v0.0.9 のままでは、Container を作る関数に設定ファイルの値が正しく渡りません)。
-juiz_sdk の Rust のコードは v0.0.9 と同じなので、crates.io の juiz_app 0.0.9 と組み合わせて使えます。
+CMake が取得する juiz の版は `JUIZ_GIT_TAG` で決まります。既定値は `v0.0.10` で、crates.io の juiz_app 0.0.10 と組み合わせて使います。
 別の版を使うときは、`cargo install juiz_app` で入れた版と合わせて指定してください。
 
 ```sh
-cmake -S . -B build -DJUIZ_GIT_TAG=v0.0.10
+cmake -S . -B build -DJUIZ_GIT_TAG=<タグかコミット>
 ```
