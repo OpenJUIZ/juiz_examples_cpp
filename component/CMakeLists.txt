@@ -1,0 +1,1 @@
+add_juiz_component(example_component_cpp SOURCES example_component_cpp/example_component_cpp.cpp)
