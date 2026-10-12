@@ -1,0 +1,4 @@
+add_juiz_process(increment_process_cpp SOURCES increment_process_cpp/increment_process_cpp.cpp)
+add_juiz_process(decrement_process_cpp SOURCES decrement_process_cpp/decrement_process_cpp.cpp)
+add_juiz_process(talker_cpp SOURCES talker_cpp/talker_cpp.cpp)
+add_juiz_process(listener_cpp SOURCES listener_cpp/listener_cpp.cpp)
