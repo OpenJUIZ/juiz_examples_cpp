@@ -7,7 +7,7 @@
 #   JUIZ_SOURCE_DIR を指定した場合: そのディレクトリの juiz のソースを使う
 #   指定しない場合: GitHub から JUIZ_GIT_TAG の版を取得する
 #
-# JUIZ_GIT_TAG の既定値は v0.0.15。crates.io の juiz_app 0.0.15 と組み合わせて使う。
+# JUIZ_GIT_TAG の既定値は v0.0.16。crates.io の juiz_app 0.0.16 と組み合わせて使う。
 #
 # libjuiz_sdk は cargo でビルドし、プラグインと同じ出力ディレクトリ (JUIZ_PLUGIN_DIR) にコピーする。
 # プラグインには RPATH として自身の場所 ($ORIGIN / @loader_path) を埋め込むので、
@@ -16,7 +16,7 @@
 include(FetchContent)
 
 set(JUIZ_GIT_REPOSITORY "https://github.com/OpenJUIZ/juiz.git" CACHE STRING "juiz の Git リポジトリ")
-set(JUIZ_GIT_TAG "v0.0.15" CACHE STRING "使用する juiz の版 (タグかコミット。cargo install juiz_app で入れた版と合わせる)")
+set(JUIZ_GIT_TAG "v0.0.16" CACHE STRING "使用する juiz の版 (タグかコミット。cargo install juiz_app で入れた版と合わせる)")
 set(JUIZ_SOURCE_DIR "" CACHE PATH "手元にある juiz のソースのディレクトリ (空なら GitHub から取得)")
 set(JUIZ_PLUGIN_DIR "${CMAKE_BINARY_DIR}/plugins" CACHE PATH "プラグインの出力先")
 
