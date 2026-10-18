@@ -177,6 +177,7 @@ Component に入れた Container を設定ファイルの `containers` で作る
 | `component/` | 複数の要素を 1 つのライブラリにまとめた Component のサンプル |
 | `cmake/Juiz.cmake` | juiz のヘッダと libjuiz_sdk を用意し、`add_juiz_process()` などを定義する |
 | `*.conf` | 各サンプルを動かすための juiz の設定ファイル |
+| `tests/test_examples.py` | 上のサンプルを起動して呼び出し、結果を確かめるテスト (ビルドのあと `python3 tests/test_examples.py`)。CI でも実行する |
 
 ## 自分で書くときは
 
