@@ -1,7 +1,7 @@
 # juiz_examples_cpp
 
 ロボット・IoT 向けミドルウェア [juiz](https://github.com/OpenJUIZ/juiz) の C++ 版サンプル集です。
-`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.0.16 を使います。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz のリポジトリから自動で取得するので、juiz のソースを手元に用意する必要はありません。
+`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.0.17 を使います。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz のリポジトリから自動で取得するので、juiz のソースを手元に用意する必要はありません。
 
 Rust 版は [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust)、Python 版は [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) にあります。
 
@@ -87,7 +87,7 @@ juiz process call "http://127.0.0.1:8000/process/increment0::increment_process_c
 # => CapsulePtr((value:Value(4), option: []))
 ```
 
-API の定義 (OpenAPI) は http://127.0.0.1:8000/api-docs/openapi.json で取得できます。crates.io 版の juiz_app では Swagger UI (`/docs`) は無効になっています。
+Swagger UI は http://127.0.0.1:8000/docs/ で開けます。API の定義 (OpenAPI) は http://127.0.0.1:8000/api-docs/openapi.json で取得できます。
 
 `decrement_process.conf` も同じ使い方です (1 を引く Process)。
 
@@ -192,7 +192,7 @@ Container は `add_juiz_container()`、ContainerProcess は `add_juiz_container_
 
 ## juiz の版について
 
-CMake が取得する juiz の版は `JUIZ_GIT_TAG` で決まります。既定値は `v0.0.16` で、crates.io の juiz_app 0.0.16 と組み合わせて使います。
+CMake が取得する juiz の版は `JUIZ_GIT_TAG` で決まります。既定値は `v0.0.17` で、crates.io の juiz_app 0.0.17 と組み合わせて使います。
 別の版を使うときは、`cargo install juiz_app` で入れた版と合わせて指定してください。
 
 ```sh
