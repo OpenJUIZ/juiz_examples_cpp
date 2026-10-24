@@ -1,7 +1,7 @@
 # juiz_examples_cpp
 
 ロボット・IoT 向けミドルウェア [juiz](https://github.com/OpenJUIZ/juiz) の C++ 版サンプル集です。
-`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.0.20 を使います。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz のリポジトリから自動で取得するので、juiz のソースを手元に用意する必要はありません。
+`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.0.21 を使います。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz のリポジトリから自動で取得するので、juiz のソースを手元に用意する必要はありません。
 
 Rust 版は [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust)、Python 版は [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) にあります。
 
@@ -168,6 +168,57 @@ juiz container-process call "http://127.0.0.1:8000/container_process/get0::examp
 
 Component に入れた Container を設定ファイルの `containers` で作るには juiz 0.0.10 以降が必要です (0.0.9 では起動時にエラーになります)。
 
+### ネームスペース: 同じ構成を並べて動かす
+
+ネームスペースを使うと、同じ名前の Process を 1 つの System に並べて置けます。ID はクラスの後ろ・名前の前にネームスペースが入った `http://127.0.0.1:8000/process/robot1/talker0::talker_cpp` の形になります。
+
+#### 1 つの設定ファイルで 2 台分を置く: namespace.conf
+
+`talker0` と `listener0` を `robot1` と `robot2` の 2 つのネームスペースに置き、Topic `chatter` でつなぎます。Topic 名もネームスペースの中で解決される (`robot1/chatter` と `robot2/chatter`) ので、それぞれの `listener0` には同じネームスペースの `talker0` の出力だけが届きます。
+
+```sh
+juiz -f namespace.conf -d
+# talker_cpp: Hello from robot1
+# listener_cpp: Hello from robot1
+# talker_cpp: Hello from robot2
+# listener_cpp: Hello from robot2
+# ...
+```
+
+別のターミナルから、ネームスペースの列つきで一覧を出したり、ネームスペース付きの ID で呼び出したりできます。
+
+```sh
+juiz process list --long
+# NAMESPACE  NAME       TYPE        ID
+# /robot1    talker0    talker_cpp  http://127.0.0.1:8000/process/robot1/talker0::talker_cpp
+# ...
+juiz process call "http://127.0.0.1:8000/process/robot1/talker0::talker_cpp" '{"message": "Hi"}' -p
+# => CapsulePtr((value:Value("Hi"), option: []))
+```
+
+設定ファイルでは各要素に `namespace` を書きます (`/` で始めるとルートからの絶対指定)。トップレベルに `namespace` を書くと、全体の既定のネームスペースになります。
+
+#### 同じ設定ファイルを 2 つ起動する: --namespace
+
+`--namespace` を付けると、設定ファイルの既定のネームスペースを置き換えて起動できます。2 つのターミナルで次のように起動すると、2 つ目は 1 つ目のサブシステムになり (8001 番ポートで待ち受け)、1 つの System として扱えます。
+
+```sh
+juiz -f increment_process.conf --namespace robot1 -d
+```
+
+```sh
+juiz -f increment_process.conf --namespace robot2 -d
+```
+
+```sh
+juiz process list --namespace robot2
+# => ["http://127.0.0.1:8001/process/robot2/increment0::increment_process_cpp"]
+juiz process call "http://127.0.0.1:8000/process/robot1/increment0::increment_process_cpp" '{"arg1": 1}' -p
+# => CapsulePtr((value:Value(2), option: []))
+juiz process call "http://127.0.0.1:8001/process/robot2/increment0::increment_process_cpp" '{"arg1": 10}' -p
+# => CapsulePtr((value:Value(11), option: []))
+```
+
 ## 構成
 
 | パス | 内容 |
@@ -192,7 +243,7 @@ Container は `add_juiz_container()`、ContainerProcess は `add_juiz_container_
 
 ## juiz の版について
 
-CMake が取得する juiz の版は `JUIZ_GIT_TAG` で決まります。既定値は `v0.0.20` で、crates.io の juiz_app 0.0.20 と組み合わせて使います。
+CMake が取得する juiz の版は `JUIZ_GIT_TAG` で決まります。既定値は `v0.0.21` で、crates.io の juiz_app 0.0.21 と組み合わせて使います。
 別の版を使うときは、`cargo install juiz_app` で入れた版と合わせて指定してください。
 
 ```sh
