@@ -1,7 +1,7 @@
 # juiz_examples_cpp
 
 ロボット・IoT 向けミドルウェア [juiz](https://github.com/OpenJUIZ/juiz) の C++ 版サンプル集です。
-`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) を使います (データ型のサンプルは juiz の次の版 0.0.23 で入る機能を使うので、公開までは juiz の main のコミットを使います。「[データ型](#データ型-言語をまたいで同じ型を使う)」を見てください)。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz のリポジトリから自動で取得するので、juiz のソースを手元に用意する必要はありません。
+`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.0.23 を使います。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz のリポジトリから自動で取得するので、juiz のソースを手元に用意する必要はありません。
 
 Rust 版は [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust)、Python 版は [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) にあります。
 
@@ -232,11 +232,11 @@ record Pose2D  { Point2D position = {"x": 0.0, "y": 0.0}; double theta = 0.0; st
 record Twist2D { double linear = 0.0; double angular = 0.0; }
 ```
 
-> データ型は juiz の次の版 (0.0.23) で入ります。公開までは、`JUIZ_GIT_TAG` の既定値を juiz の main のコミットにしてあるので、juiz コマンドも同じコミットから入れてください。
+> データ型は juiz 0.0.23 から使えます。juiz コマンドと、Python の Process が使う pyjuiz は 0.0.23 以降を入れてください。
 >
 > ```sh
-> cargo install juiz_app --git https://github.com/OpenJUIZ/juiz --rev 359438b023cd4ba982e7c1ef6a9ddaf3c15d76ab --locked
-> pip install "pyjuiz @ git+https://github.com/OpenJUIZ/juiz@359438b023cd4ba982e7c1ef6a9ddaf3c15d76ab#subdirectory=bindings/pyjuiz"
+> cargo install juiz_app --version 0.0.23 --locked
+> pip install pyjuiz==0.0.23
 > ```
 
 C++ の Process [process/pose_move_cpp](process/pose_move_cpp/pose_move_cpp.cpp) は、types/geometry.jidl から作った型 (`juiz_idl.h`) をそのまま引数と戻り値に使います。型は CMake の関数 `juiz_generate_types()` がビルドのときに作ります (`juiz-idl` は CMake が juiz のソースからビルドします)。
@@ -345,7 +345,7 @@ Container は `add_juiz_container()`、ContainerProcess は `add_juiz_container_
 
 ## juiz の版について
 
-CMake が取得する juiz の版は `JUIZ_GIT_TAG` で決まります。既定値は、データ型のサンプルのため juiz の main のコミット (`359438b…`) にしてあり、同じコミットから入れた juiz コマンドと組み合わせて使います (juiz 0.0.23 の公開後はそのタグに戻します)。
+CMake が取得する juiz の版は `JUIZ_GIT_TAG` で決まります。既定値は `v0.0.23` で、crates.io の juiz_app 0.0.23 と組み合わせて使います。
 別の版を使うときは、`cargo install juiz_app` で入れた版と合わせて指定してください。
 
 ```sh
