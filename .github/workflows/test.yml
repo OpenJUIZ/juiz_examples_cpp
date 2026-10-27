@@ -8,7 +8,7 @@ on:
 
 env:
   # README の手順で使う juiz_app と pyjuiz の版。cmake/Juiz.cmake の JUIZ_GIT_TAG と合わせる
-  JUIZ_VERSION: "0.0.23"
+  JUIZ_VERSION: "0.0.24"
 
 jobs:
   examples:
