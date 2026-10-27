@@ -17,7 +17,7 @@
 include(FetchContent)
 
 set(JUIZ_GIT_REPOSITORY "https://github.com/OpenJUIZ/juiz.git" CACHE STRING "juiz の Git リポジトリ")
-set(JUIZ_GIT_TAG "9e07ce30bafb29d71e9896eb90bbafb9fdbafa25" CACHE STRING "使用する juiz の版 (タグかコミット。cargo install juiz_app で入れた版と合わせる)")
+set(JUIZ_GIT_TAG "43a2210c7affaf62f93dc48ad1fd53d77f326df2" CACHE STRING "使用する juiz の版 (タグかコミット。cargo install juiz_app で入れた版と合わせる)")
 set(JUIZ_SOURCE_DIR "" CACHE PATH "手元にある juiz のソースのディレクトリ (空なら GitHub から取得)")
 set(JUIZ_PLUGIN_DIR "${CMAKE_BINARY_DIR}/plugins" CACHE PATH "プラグインの出力先")
 

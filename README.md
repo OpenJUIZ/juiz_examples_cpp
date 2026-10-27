@@ -235,8 +235,8 @@ record Twist2D { double linear = 0.0; double angular = 0.0; }
 > データ型は juiz の次の版 (0.0.23) で入ります。公開までは、`JUIZ_GIT_TAG` の既定値を juiz の main のコミットにしてあるので、juiz コマンドも同じコミットから入れてください。
 >
 > ```sh
-> cargo install juiz_app --git https://github.com/OpenJUIZ/juiz --rev 9e07ce30bafb29d71e9896eb90bbafb9fdbafa25 --locked
-> pip install "pyjuiz @ git+https://github.com/OpenJUIZ/juiz@9e07ce30bafb29d71e9896eb90bbafb9fdbafa25#subdirectory=bindings/pyjuiz"
+> cargo install juiz_app --git https://github.com/OpenJUIZ/juiz --rev 43a2210c7affaf62f93dc48ad1fd53d77f326df2 --locked
+> pip install "pyjuiz @ git+https://github.com/OpenJUIZ/juiz@43a2210c7affaf62f93dc48ad1fd53d77f326df2#subdirectory=bindings/pyjuiz"
 > ```
 
 C++ の Process [process/pose_move_cpp](process/pose_move_cpp/pose_move_cpp.cpp) は、types/geometry.jidl から作った型 (`juiz_idl.h`) をそのまま引数と戻り値に使います。型は CMake の関数 `juiz_generate_types()` がビルドのときに作ります (`juiz-idl` は CMake が juiz のソースからビルドします)。
@@ -345,7 +345,7 @@ Container は `add_juiz_container()`、ContainerProcess は `add_juiz_container_
 
 ## juiz の版について
 
-CMake が取得する juiz の版は `JUIZ_GIT_TAG` で決まります。既定値は、データ型のサンプルのため juiz の main のコミット (`9e07ce3…`) にしてあり、同じコミットから入れた juiz コマンドと組み合わせて使います (juiz 0.0.23 の公開後はそのタグに戻します)。
+CMake が取得する juiz の版は `JUIZ_GIT_TAG` で決まります。既定値は、データ型のサンプルのため juiz の main のコミット (`43a2210…`) にしてあり、同じコミットから入れた juiz コマンドと組み合わせて使います (juiz 0.0.23 の公開後はそのタグに戻します)。
 別の版を使うときは、`cargo install juiz_app` で入れた版と合わせて指定してください。
 
 ```sh
