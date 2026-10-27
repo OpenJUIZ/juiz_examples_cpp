@@ -7,7 +7,7 @@
 #   JUIZ_SOURCE_DIR を指定した場合: そのディレクトリの juiz のソースを使う
 #   指定しない場合: GitHub から JUIZ_GIT_TAG の版を取得する
 #
-# JUIZ_GIT_TAG の既定値は v0.0.21。crates.io の juiz_app 0.0.21 と組み合わせて使う。
+# JUIZ_GIT_TAG の既定値は v0.0.23。crates.io の juiz_app 0.0.23 と組み合わせて使う。
 #
 # libjuiz_sdk は cargo でビルドし、プラグインと同じ出力ディレクトリ (JUIZ_PLUGIN_DIR) にコピーする。
 # プラグインには RPATH として自身の場所 ($ORIGIN / @loader_path) を埋め込むので、
@@ -16,7 +16,7 @@
 include(FetchContent)
 
 set(JUIZ_GIT_REPOSITORY "https://github.com/OpenJUIZ/juiz.git" CACHE STRING "juiz の Git リポジトリ")
-set(JUIZ_GIT_TAG "v0.0.21" CACHE STRING "使用する juiz の版 (タグかコミット。cargo install juiz_app で入れた版と合わせる)")
+set(JUIZ_GIT_TAG "v0.0.23" CACHE STRING "使用する juiz の版 (タグかコミット。cargo install juiz_app で入れた版と合わせる)")
 set(JUIZ_SOURCE_DIR "" CACHE PATH "手元にある juiz のソースのディレクトリ (空なら GitHub から取得)")
 set(JUIZ_PLUGIN_DIR "${CMAKE_BINARY_DIR}/plugins" CACHE PATH "プラグインの出力先")
 
@@ -63,6 +63,22 @@ set_target_properties(juiz_sdk PROPERTIES
   INTERFACE_INCLUDE_DIRECTORIES "${JUIZ_SOURCE_DIR}/bindings/cppjuiz/include"
 )
 add_dependencies(juiz_sdk juiz_sdk_build)
+
+# データ型: IDL (types/geometry.jidl) から C++ の型を作る juiz-idl と、CMake の関数 juiz_generate_types()。
+# JUIZ_IDL_EXECUTABLE を指定しなければ、juiz-idl を juiz のソースから cargo でビルドして使う (同じ版の生成器になる)
+if(NOT JUIZ_IDL_EXECUTABLE)
+  message(STATUS "Building juiz-idl with cargo")
+  execute_process(
+    COMMAND ${CARGO_EXECUTABLE} build --release -p juiz_idl
+            --manifest-path ${JUIZ_SOURCE_DIR}/Cargo.toml
+            --target-dir ${JUIZ_SDK_TARGET_DIR}
+    RESULT_VARIABLE JUIZ_IDL_BUILD_RESULT)
+  if(NOT JUIZ_IDL_BUILD_RESULT EQUAL 0)
+    message(FATAL_ERROR "juiz-idl のビルドに失敗しました")
+  endif()
+  set(JUIZ_IDL_EXECUTABLE "${JUIZ_SDK_TARGET_DIR}/release/juiz-idl${CMAKE_EXECUTABLE_SUFFIX}")
+endif()
+include(${JUIZ_SOURCE_DIR}/bindings/cppjuiz/cmake/juiz_idl.cmake)
 
 if(APPLE)
   set(JUIZ_PLUGIN_RPATH "@loader_path")

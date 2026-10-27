@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
 
 env:
-  # README の手順で使う juiz_app の版。cmake/Juiz.cmake の JUIZ_GIT_TAG と合わせる
-  JUIZ_VERSION: "0.0.21"
+  # README の手順で使う juiz_app と pyjuiz の版。cmake/Juiz.cmake の JUIZ_GIT_TAG と合わせる
+  JUIZ_VERSION: "0.0.23"
 
 jobs:
   examples:
@@ -28,6 +28,9 @@ jobs:
       - name: juiz コマンドをインストールする
         if: steps.juiz-cache.outputs.cache-hit != 'true'
         run: cargo install juiz_app --version "$JUIZ_VERSION" --locked
+      # データ型のサンプル (typed_pose.conf) の Python の Process が pyjuiz を使う
+      - name: pyjuiz をインストールする
+        run: python3 -m pip install --user --break-system-packages "pyjuiz==${JUIZ_VERSION}"
       - name: libjuiz_sdk のビルド結果のキャッシュ
         uses: actions/cache@v4
         with:
