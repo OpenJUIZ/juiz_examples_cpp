@@ -13,6 +13,13 @@ env:
 jobs:
   examples:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # archive: libjuiz_sdk を GitHub Releases のアーカイブから取得する (既定)
+        # source: juiz のソースから cargo でビルドする (アーカイブが無いときの手順)
+        sdk: [archive, source]
+    name: examples (${{ matrix.sdk }})
     steps:
       - uses: actions/checkout@v4
       # juiz_app は Python を組み込むので、ビルドに Python の開発用ファイルが要る
@@ -32,13 +39,20 @@ jobs:
       - name: pyjuiz をインストールする
         run: python3 -m pip install --user --break-system-packages "pyjuiz==${JUIZ_VERSION}"
       - name: libjuiz_sdk のビルド結果のキャッシュ
+        if: matrix.sdk == 'source'
         uses: actions/cache@v4
         with:
           path: build/juiz_sdk
           key: juiz-sdk-${{ env.JUIZ_VERSION }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('cmake/Juiz.cmake') }}
       - name: サンプルをビルドする
         run: |
-          cmake -S . -B build
+          cmake -S . -B build -DJUIZ_SDK_FROM_SOURCE=${{ matrix.sdk == 'source' && 'ON' || 'OFF' }}
           cmake --build build -j
+      # アーカイブを取得できずにソースからのビルドに切り替わっていないことを確かめる
+      - name: アーカイブの libjuiz_sdk を使ったか確かめる
+        if: matrix.sdk == 'archive'
+        run: |
+          test -f "build/juiz_sdk_archive/juiz_sdk-${JUIZ_VERSION}-x86_64-unknown-linux-gnu/lib/libjuiz_sdk.so"
+          test ! -e build/juiz_sdk
       - name: サンプルを動かして結果を確かめる
         run: python3 tests/test_examples.py
