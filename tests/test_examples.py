@@ -95,7 +95,9 @@ def run_call(juiz: str, args) -> tuple[int, str, str]:
                 return 0, response.read().decode("utf-8"), ""
         except OSError as e:
             return 1, "", str(e)
-    result = subprocess.run([juiz, *args], cwd=ROOT, capture_output=True, text=True, timeout=30)
+    # Windows の既定のコードページではなく、juiz の出力 (UTF-8) として読む
+    result = subprocess.run([juiz, *args], cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
+                            errors="replace", timeout=30)
     return result.returncode, result.stdout, result.stderr
 
 
@@ -103,7 +105,7 @@ def generate_python_types(juiz: str) -> bool:
     """README の手順どおり、データ型のサンプルの Python の型を gen/ に作る。"""
     print("--- juiz idl -g python -o gen types/geometry.jidl", flush=True)
     result = subprocess.run([juiz, "idl", "-g", "python", "-o", "gen", "types/geometry.jidl"], cwd=ROOT,
-                            capture_output=True, text=True, timeout=60)
+                            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
     if result.returncode != 0:
         print(f"NG: juiz idl が失敗しました\n{result.stdout}{result.stderr}", file=sys.stderr)
         return False
@@ -116,7 +118,7 @@ def run_mismatch(juiz: str) -> bool:
     wait_for_port_free(PORT, 30)
     try:
         result = subprocess.run([juiz, "-f", MISMATCH_CONF, "-d"], cwd=ROOT, capture_output=True, text=True,
-                                timeout=60)
+                                encoding="utf-8", errors="replace", timeout=60)
     except subprocess.TimeoutExpired:
         print("NG: 型の合わない接続なのに juiz が起動したままです", file=sys.stderr)
         return False
@@ -267,7 +269,8 @@ def run_two_namespaces(juiz: str) -> bool:
             (["process", "call", r2, '{"arg1": 10}', "-p"], "Value(11)"),
         ]
         for args, expected in calls:
-            result = subprocess.run([juiz, *args], cwd=ROOT, capture_output=True, text=True, timeout=60)
+            result = subprocess.run([juiz, *args], cwd=ROOT, capture_output=True, text=True, encoding="utf-8",
+                                    errors="replace", timeout=60)
             print(f"juiz {' '.join(args)}\n  {result.stdout.strip()}", flush=True)
             if result.returncode != 0 or expected not in result.stdout:
                 print(f"NG: {expected!r} が出力に含まれていません\n{result.stderr}", file=sys.stderr)
