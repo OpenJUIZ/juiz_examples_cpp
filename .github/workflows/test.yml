@@ -81,3 +81,6 @@ jobs:
           test ! -e build/juiz_sdk
       - name: サンプルを動かして結果を確かめる
         run: python tests/test_examples.py
+        env:
+          # テストの表示 (日本語や juiz type show の記号) を Windows の既定のコードページではなく UTF-8 で書く
+          PYTHONIOENCODING: utf-8
