@@ -1,29 +1,30 @@
 # juiz_examples_cpp
 
 ロボット・IoT 向けミドルウェア [juiz](https://github.com/OpenJUIZ/juiz) の C++ 版サンプル集です。
-`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.0.26 を使います。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz の [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から自動で取得するので、juiz のソースを手元に用意したり、`libjuiz_sdk` をビルドしたりする必要はありません。
+`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.0.27 を使います。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz の [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から自動で取得するので、juiz のソースを手元に用意したり、`libjuiz_sdk` をビルドしたりする必要はありません。
 
 Rust 版は [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust)、Python 版は [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) にあります。
 
 ## しくみ
 
-C++ で書いた Process や Container は共有ライブラリ (`lib*.so`、macOS では `lib*.dylib`) としてビルドし、`juiz` コマンドが設定ファイル (`*.conf`) を読んでプラグインとして読み込みます。
+C++ で書いた Process や Container は共有ライブラリ (`lib*.so`、macOS では `lib*.dylib`、Windows では `*.dll`) としてビルドし、`juiz` コマンドが設定ファイル (`*.conf`) を読んでプラグインとして読み込みます。
 
 C++ のプラグインは juiz の C++ ヘッダ (`bindings/cppjuiz/include`) を使って書き、juiz_sdk の共有ライブラリ `libjuiz_sdk` とリンクします。
 どちらも `cargo install juiz_app` では入らないので、このリポジトリの CMake ([cmake/Juiz.cmake](cmake/Juiz.cmake)) が次のことを行います。
 
-1. juiz の GitHub Releases から、`juiz` コマンドと同じ版の `juiz_sdk-<版>-<ターゲット>.tar.gz` (`libjuiz_sdk` と C / C++ のヘッダ) を `build/juiz_sdk_archive` に取得する (チェックサムも確かめる)
-2. `libjuiz_sdk` をプラグインと同じ `build/plugins` に置き、プラグインには自分と同じ場所からライブラリを探す RPATH を付ける
+1. juiz の GitHub Releases から、`juiz` コマンドと同じ版の `juiz_sdk-<版>-<ターゲット>.tar.gz` (Windows は `.zip`。`libjuiz_sdk` と C / C++ のヘッダ) を `build/juiz_sdk_archive` に取得する (チェックサムも確かめる)
+2. `libjuiz_sdk` をプラグインと同じ `build/plugins` に置き、プラグインには自分と同じ場所からライブラリを探す RPATH を付ける (Windows では、juiz がプラグインの隣の `juiz_sdk.dll` を探す)
 3. データ型のサンプルでは、`juiz idl` (`juiz` コマンドに入っている型の生成器) で C++ の型を作る
 
-アーカイブを配布しているのは Linux (x86_64・aarch64) と macOS (arm64・x86_64) で、juiz 0.0.26 からです。
+アーカイブを配布しているのは Linux (x86_64・aarch64) と macOS (arm64・x86_64) で、juiz 0.0.26 からです。Windows (x86_64) は 0.0.27 からです。
 アーカイブを取得できないときは、これまでどおり juiz のソースを取得して `cargo build --release -p juiz_sdk` でビルドします ([ソースからビルドする](#ソースからビルドする))。
 
 ## 必要なもの
 
-- Linux (macOS は未確認)
-- Rust (stable)。`juiz` コマンドのインストールに使います。インストールは https://rustup.rs/ を参照してください。
-- CMake 3.16 以降と C++17 対応のコンパイラ (Ubuntu なら `sudo apt install cmake g++`)
+- Linux・macOS・Windows (x86_64)
+- Rust (stable)。Linux・macOS で `juiz` コマンドのインストールに使います。インストールは https://rustup.rs/ を参照してください。
+- CMake 3.16 以降と C++17 対応のコンパイラ (Ubuntu なら `sudo apt install cmake g++`、Windows は Visual Studio 2022 か Build Tools for Visual Studio 2022)
+- Windows では Python 3.10 以降 (`juiz` コマンドを pip で入れます)
 
 ## 1. juiz コマンドをインストールする
 
@@ -33,6 +34,14 @@ cargo install juiz_app
 
 `juiz` コマンドが `~/.cargo/bin` に入ります。
 
+Windows では、pip で [juiz-cli](https://pypi.org/project/juiz-cli/) を入れます (PowerShell)。
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+pip install juiz-cli
+```
+
 ## 2. サンプルをビルドする
 
 ```sh
@@ -41,6 +50,8 @@ cd juiz_examples_cpp
 cmake -S . -B build
 cmake --build build
 ```
+
+Windows (Visual Studio のジェネレータ) では `cmake --build build --config Release` でビルドします。
 
 初回は `libjuiz_sdk` のアーカイブを取得します。
 ビルドしたプラグインは `build/plugins` に出力されます。設定ファイルは `./build/plugins` からプラグインを探すので、**リポジトリのルートで** `juiz` を実行してください。
@@ -245,8 +256,8 @@ record Twist2D { double linear = 0.0; double angular = 0.0; }
 > データ型は juiz 0.0.23 から使えます。juiz コマンドと、Python の Process が使う pyjuiz は 0.0.23 以降を入れてください。
 >
 > ```sh
-> cargo install juiz_app --version 0.0.26 --locked
-> pip install pyjuiz==0.0.26
+> cargo install juiz_app --version 0.0.27 --locked
+> pip install pyjuiz==0.0.27
 > ```
 
 C++ の Process [process/pose_move_cpp](process/pose_move_cpp/pose_move_cpp.cpp) は、types/geometry.jidl から作った型 (`juiz_idl.h`) をそのまま引数と戻り値に使います。型は CMake の関数 `juiz_generate_types()` がビルドのときに作ります (生成器は PATH の `juiz-idl`、無ければ `juiz idl` を使います。ソースからビルドするときは同じソースの `juiz-idl` をビルドして使います)。
@@ -355,7 +366,7 @@ Container は `add_juiz_container()`、ContainerProcess は `add_juiz_container_
 
 ## juiz の版について
 
-CMake が取得する juiz (libjuiz_sdk のアーカイブ) の版は `JUIZ_GIT_TAG` で決まります。既定値は `v0.0.26` で、crates.io の juiz_app 0.0.26 と組み合わせて使います。
+CMake が取得する juiz (libjuiz_sdk のアーカイブ) の版は `JUIZ_GIT_TAG` で決まります。既定値は `v0.0.27` で、crates.io の juiz_app 0.0.27 と組み合わせて使います。
 別の版を使うときは、`cargo install juiz_app` で入れた版と合わせて指定してください。juiz は版の違う libjuiz_sdk でビルドしたプラグインを読み込みません。
 
 ```sh

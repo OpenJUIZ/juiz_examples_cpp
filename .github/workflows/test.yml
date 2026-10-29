@@ -8,7 +8,7 @@ on:
 
 env:
   # README の手順で使う juiz_app と pyjuiz の版。cmake/Juiz.cmake の JUIZ_GIT_TAG と合わせる
-  JUIZ_VERSION: "0.0.26"
+  JUIZ_VERSION: "0.0.27"
 
 jobs:
   examples:
@@ -56,3 +56,31 @@ jobs:
           test ! -e build/juiz_sdk
       - name: サンプルを動かして結果を確かめる
         run: python3 tests/test_examples.py
+
+  # Windows: juiz は pip の juiz-cli で入れ、libjuiz_sdk は GitHub Releases の .zip を使う (0.0.27 から)
+  examples-windows:
+    runs-on: windows-latest
+    name: examples (windows)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: juiz コマンドをインストールする
+        run: python -m pip install "juiz-cli==$env:JUIZ_VERSION"
+      - name: サンプルをビルドする
+        run: |
+          cmake -S . -B build
+          cmake --build build --config Release -j
+      - name: アーカイブの libjuiz_sdk を使ったか確かめる
+        shell: bash
+        run: |
+          test -f "build/juiz_sdk_archive/juiz_sdk-${JUIZ_VERSION}-x86_64-pc-windows-msvc/bin/juiz_sdk.dll"
+          test -f build/plugins/juiz_sdk.dll
+          test -f build/plugins/increment_process_cpp.dll
+          test ! -e build/juiz_sdk
+      - name: サンプルを動かして結果を確かめる
+        run: python tests/test_examples.py
+        env:
+          # テストの表示 (日本語や juiz type show の記号) を Windows の既定のコードページではなく UTF-8 で書く
+          PYTHONIOENCODING: utf-8

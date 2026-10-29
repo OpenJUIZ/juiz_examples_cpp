@@ -1,26 +1,28 @@
 # juiz の C++ 機能要素をビルドするための設定
 #
 # C++ の機能要素は、juiz の C++ ヘッダ (cppjuiz) を使って書き、
-# juiz_sdk の共有ライブラリ (libjuiz_sdk.so / libjuiz_sdk.dylib) とリンクする。
+# juiz_sdk の共有ライブラリ (libjuiz_sdk.so / libjuiz_sdk.dylib / juiz_sdk.dll) とリンクする。
 # どちらも crates.io の juiz_app に同梱されていないので、次のどちらかで用意する。
 #
 #   アーカイブ (既定): JUIZ_GIT_TAG がタグ (v<版>) なら、GitHub Releases にある
 #     juiz_sdk-<版>-<ターゲット>.tar.gz (libjuiz_sdk とヘッダ、0.0.26 から) を build/juiz_sdk_archive に取得する。
-#     cargo も juiz のソースも要らない。配布しているのは Linux (x86_64・aarch64) と macOS (arm64・x86_64)。
+#     cargo も juiz のソースも要らない。配布しているのは Linux (x86_64・aarch64) と macOS (arm64・x86_64)、
+#     0.0.27 からは Windows (x86_64、MSVC。.zip に juiz_sdk.dll とインポートライブラリ juiz_sdk.dll.lib)。
 #   ソース: JUIZ_SOURCE_DIR を指定した場合はそのディレクトリの juiz のソースを、
 #     JUIZ_GIT_TAG がタグでない場合・JUIZ_SDK_FROM_SOURCE=ON の場合・アーカイブを取得できなかった場合は
 #     GitHub から取得した JUIZ_GIT_TAG のソースを使い、libjuiz_sdk を cargo でビルドする。
 #
-# JUIZ_GIT_TAG の既定値は v0.0.26。crates.io の juiz_app 0.0.26 と組み合わせて使う。
+# JUIZ_GIT_TAG の既定値は v0.0.27。crates.io の juiz_app 0.0.27 と組み合わせて使う。
 #
 # libjuiz_sdk はプラグインと同じ出力ディレクトリ (JUIZ_PLUGIN_DIR) に置く。
 # プラグインには RPATH として自身の場所 ($ORIGIN / @loader_path) を埋め込むので、
 # juiz がプラグインを読み込むと隣の libjuiz_sdk も見つかる。
+# Windows には RPATH が無いが、juiz (0.0.27 から) はプラグインの DLL が使う DLL をプラグインの隣から探す。
 
 include(FetchContent)
 
 set(JUIZ_GIT_REPOSITORY "https://github.com/OpenJUIZ/juiz.git" CACHE STRING "juiz の Git リポジトリ")
-set(JUIZ_GIT_TAG "v0.0.26" CACHE STRING "使用する juiz の版 (タグかコミット。cargo install juiz_app で入れた版と合わせる)")
+set(JUIZ_GIT_TAG "v0.0.27" CACHE STRING "使用する juiz の版 (タグかコミット。cargo install juiz_app で入れた版と合わせる)")
 set(JUIZ_SOURCE_DIR "" CACHE PATH "手元にある juiz のソースのディレクトリ (空ならアーカイブか GitHub から取得)")
 option(JUIZ_SDK_FROM_SOURCE "libjuiz_sdk をアーカイブを使わずに juiz のソースからビルドする" OFF)
 set(JUIZ_SDK_RELEASE_URL "https://github.com/OpenJUIZ/juiz/releases/download" CACHE STRING "libjuiz_sdk のアーカイブの取得元")
@@ -28,6 +30,12 @@ set(JUIZ_PLUGIN_DIR "${CMAKE_BINARY_DIR}/plugins" CACHE PATH "プラグインの
 
 set(JUIZ_SDK_LIBRARY_NAME "${CMAKE_SHARED_LIBRARY_PREFIX}juiz_sdk${CMAKE_SHARED_LIBRARY_SUFFIX}")
 set(JUIZ_SDK_LIBRARY "${JUIZ_PLUGIN_DIR}/${JUIZ_SDK_LIBRARY_NAME}")
+# Windows の DLL はアーカイブでは bin/ に、リンクに使うインポートライブラリ (juiz_sdk.dll.lib) は lib/ にある
+if(WIN32)
+  set(JUIZ_SDK_ARCHIVE_LIBRARY_SUBDIR "bin")
+else()
+  set(JUIZ_SDK_ARCHIVE_LIBRARY_SUBDIR "lib")
+endif()
 
 # GitHub Releases から libjuiz_sdk のアーカイブを取得して展開する。
 # 展開したディレクトリを OUT_DIR に返す。取得できなければ空にする
@@ -42,10 +50,14 @@ function(juiz_fetch_sdk_archive VERSION OUT_DIR)
     message(STATUS "${CMAKE_SYSTEM_PROCESSOR} 向けの libjuiz_sdk のアーカイブは配布していません")
     return()
   endif()
+  set(ext "tar.gz")
   if(APPLE)
     set(target "${arch}-apple-darwin")
   elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(target "${arch}-unknown-linux-gnu")
+  elseif(WIN32 AND arch STREQUAL "x86_64")
+    set(target "${arch}-pc-windows-msvc")
+    set(ext "zip")
   else()
     message(STATUS "${CMAKE_SYSTEM_NAME} 向けの libjuiz_sdk のアーカイブは配布していません")
     return()
@@ -54,13 +66,13 @@ function(juiz_fetch_sdk_archive VERSION OUT_DIR)
   set(name "juiz_sdk-${VERSION}-${target}")
   set(archive_root "${CMAKE_BINARY_DIR}/juiz_sdk_archive")
   set(dir "${archive_root}/${name}")
-  if(EXISTS "${dir}/lib/${JUIZ_SDK_LIBRARY_NAME}" AND EXISTS "${dir}/cppjuiz/include/juiz/juiz.h")
+  if(EXISTS "${dir}/${JUIZ_SDK_ARCHIVE_LIBRARY_SUBDIR}/${JUIZ_SDK_LIBRARY_NAME}" AND EXISTS "${dir}/cppjuiz/include/juiz/juiz.h")
     set(${OUT_DIR} "${dir}" PARENT_SCOPE)
     return()
   endif()
 
-  set(url "${JUIZ_SDK_RELEASE_URL}/v${VERSION}/${name}.tar.gz")
-  set(tarball "${archive_root}/${name}.tar.gz")
+  set(url "${JUIZ_SDK_RELEASE_URL}/v${VERSION}/${name}.${ext}")
+  set(tarball "${archive_root}/${name}.${ext}")
   message(STATUS "Downloading libjuiz_sdk ${VERSION} from ${url}")
   file(DOWNLOAD "${url}.sha256" "${tarball}.sha256" STATUS st)
   list(GET st 0 code)
@@ -78,9 +90,10 @@ function(juiz_fetch_sdk_archive VERSION OUT_DIR)
     return()
   endif()
   file(REMOVE_RECURSE "${dir}")
-  execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${tarball}"
+  # cmake -E tar は .tar.gz も .zip も展開できる
+  execute_process(COMMAND ${CMAKE_COMMAND} -E tar xf "${tarball}"
                   WORKING_DIRECTORY "${archive_root}" RESULT_VARIABLE res)
-  if(NOT res EQUAL 0 OR NOT EXISTS "${dir}/lib/${JUIZ_SDK_LIBRARY_NAME}")
+  if(NOT res EQUAL 0 OR NOT EXISTS "${dir}/${JUIZ_SDK_ARCHIVE_LIBRARY_SUBDIR}/${JUIZ_SDK_LIBRARY_NAME}")
     message(STATUS "${tarball} を展開できません")
     return()
   endif()
@@ -101,7 +114,8 @@ if(JUIZ_SDK_ARCHIVE_DIR)
   message(STATUS "Using libjuiz_sdk from ${JUIZ_SDK_ARCHIVE_DIR}")
   set(JUIZ_CPP_INCLUDE_DIR "${JUIZ_SDK_ARCHIVE_DIR}/cppjuiz/include")
   file(MAKE_DIRECTORY ${JUIZ_PLUGIN_DIR})
-  file(COPY "${JUIZ_SDK_ARCHIVE_DIR}/lib/${JUIZ_SDK_LIBRARY_NAME}" DESTINATION ${JUIZ_PLUGIN_DIR})
+  file(COPY "${JUIZ_SDK_ARCHIVE_DIR}/${JUIZ_SDK_ARCHIVE_LIBRARY_SUBDIR}/${JUIZ_SDK_LIBRARY_NAME}" DESTINATION ${JUIZ_PLUGIN_DIR})
+  set(JUIZ_SDK_IMPORT_LIBRARY "${JUIZ_SDK_ARCHIVE_DIR}/lib/juiz_sdk.dll.lib")
 else()
   # ソース: juiz のソースを用意し、libjuiz_sdk を cargo でビルドしてプラグインの出力先にコピーする
   if(NOT JUIZ_SOURCE_DIR)
@@ -125,8 +139,10 @@ else()
 
   set(JUIZ_SDK_TARGET_DIR "${CMAKE_BINARY_DIR}/juiz_sdk")
   set(JUIZ_SDK_BUILT_LIBRARY "${JUIZ_SDK_TARGET_DIR}/release/${JUIZ_SDK_LIBRARY_NAME}")
+  set(JUIZ_SDK_IMPORT_LIBRARY "${JUIZ_SDK_TARGET_DIR}/release/juiz_sdk.dll.lib")
   add_custom_command(
     OUTPUT ${JUIZ_SDK_LIBRARY}
+    BYPRODUCTS ${JUIZ_SDK_IMPORT_LIBRARY}
     COMMAND ${CARGO_EXECUTABLE} build --release -p juiz_sdk
             --manifest-path ${JUIZ_SOURCE_DIR}/Cargo.toml
             --target-dir ${JUIZ_SDK_TARGET_DIR}
@@ -143,7 +159,13 @@ set_target_properties(juiz_sdk PROPERTIES
   IMPORTED_LOCATION ${JUIZ_SDK_LIBRARY}
   IMPORTED_NO_SONAME TRUE
   INTERFACE_INCLUDE_DIRECTORIES "${JUIZ_CPP_INCLUDE_DIR}"
+  # ヘッダとサンプルは日本語のコメントを含む BOM なしの UTF-8。MSVC は既定でシステムのコードページ
+  # (日本語の Windows では CP932) で読むので /utf-8 を付ける
+  INTERFACE_COMPILE_OPTIONS "$<$<CXX_COMPILER_ID:MSVC>:/utf-8>"
 )
+if(WIN32)
+  set_target_properties(juiz_sdk PROPERTIES IMPORTED_IMPLIB ${JUIZ_SDK_IMPORT_LIBRARY})
+endif()
 if(TARGET juiz_sdk_build)
   add_dependencies(juiz_sdk juiz_sdk_build)
 endif()
@@ -158,6 +180,11 @@ if(JUIZ_SDK_ARCHIVE_DIR)
     find_program(JUIZ_PROGRAM juiz HINTS "$ENV{HOME}/.cargo/bin")
     if(JUIZ_IDL_PROGRAM)
       set(JUIZ_IDL_EXECUTABLE "${JUIZ_IDL_PROGRAM}")
+    elseif(JUIZ_PROGRAM AND WIN32)
+      # juiz_generate_types() は 1 つの実行ファイルを呼ぶので、`juiz idl` を呼ぶ小さなバッチファイルを作る
+      file(TO_NATIVE_PATH "${JUIZ_PROGRAM}" juiz_program_native)
+      file(WRITE "${CMAKE_BINARY_DIR}/juiz-idl.cmd" "@\"${juiz_program_native}\" idl %*\r\n")
+      set(JUIZ_IDL_EXECUTABLE "${CMAKE_BINARY_DIR}/juiz-idl.cmd")
     elseif(JUIZ_PROGRAM)
       # juiz_generate_types() は 1 つの実行ファイルを呼ぶので、`juiz idl` を呼ぶ小さなスクリプトを作る
       file(WRITE "${CMAKE_BINARY_DIR}/juiz_idl_wrapper/juiz-idl" "#!/bin/sh\nexec \"${JUIZ_PROGRAM}\" idl \"$@\"\n")
@@ -207,19 +234,25 @@ else()
 endif()
 
 # juiz のプラグイン (共有ライブラリ) を追加する。
-# juiz は設定ファイルに書いた名前 NAME から lib<NAME>.so (macOS では lib<NAME>.dylib) を探すので、
-# ターゲット名を設定ファイルの名前と同じにする。
+# juiz は設定ファイルに書いた名前 NAME から lib<NAME>.so (macOS では lib<NAME>.dylib、Windows では <NAME>.dll) を
+# 探すので、ターゲット名を設定ファイルの名前と同じにする。
 # Process・Container・ContainerProcess・Component のどれも同じ方法でビルドする。
 function(add_juiz_plugin NAME)
   cmake_parse_arguments(JUIZ "" "" "SOURCES" ${ARGN})
   add_library(${NAME} SHARED ${JUIZ_SOURCES})
   target_link_libraries(${NAME} PRIVATE juiz_sdk)
+  # $<1:...> で囲むと、Visual Studio などの複数構成のジェネレータでも plugins/Release のように構成名が足されない
   set_target_properties(${NAME} PROPERTIES
-    PREFIX "lib"
-    LIBRARY_OUTPUT_DIRECTORY ${JUIZ_PLUGIN_DIR}
-    RUNTIME_OUTPUT_DIRECTORY ${JUIZ_PLUGIN_DIR}
+    LIBRARY_OUTPUT_DIRECTORY "$<1:${JUIZ_PLUGIN_DIR}>"
+    RUNTIME_OUTPUT_DIRECTORY "$<1:${JUIZ_PLUGIN_DIR}>"
     BUILD_RPATH ${JUIZ_PLUGIN_RPATH}
   )
+  # MinGW の既定の接頭辞 lib も付けない
+  if(WIN32)
+    set_target_properties(${NAME} PROPERTIES PREFIX "")
+  else()
+    set_target_properties(${NAME} PROPERTIES PREFIX "lib")
+  endif()
 endfunction()
 
 function(add_juiz_process NAME)
