@@ -1,7 +1,7 @@
 # juiz_examples_cpp
 
 ロボット・IoT 向けミドルウェア [juiz](https://github.com/OpenJUIZ/juiz) の C++ 版サンプル集です。
-`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.0.27 を使います。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz の [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から自動で取得するので、juiz のソースを手元に用意したり、`libjuiz_sdk` をビルドしたりする必要はありません。
+`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.0.28 を使います。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz の [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から自動で取得するので、juiz のソースを手元に用意したり、`libjuiz_sdk` をビルドしたりする必要はありません。
 
 Rust 版は [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust)、Python 版は [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) にあります。
 
@@ -256,8 +256,8 @@ record Twist2D { double linear = 0.0; double angular = 0.0; }
 > データ型は juiz 0.0.23 から使えます。juiz コマンドと、Python の Process が使う pyjuiz は 0.0.23 以降を入れてください。
 >
 > ```sh
-> cargo install juiz_app --version 0.0.27 --locked
-> pip install pyjuiz==0.0.27
+> cargo install juiz_app --version 0.0.28 --locked
+> pip install pyjuiz==0.0.28
 > ```
 
 C++ の Process [process/pose_move_cpp](process/pose_move_cpp/pose_move_cpp.cpp) は、types/geometry.jidl から作った型 (`juiz_idl.h`) をそのまま引数と戻り値に使います。型は CMake の関数 `juiz_generate_types()` がビルドのときに作ります (生成器は PATH の `juiz-idl`、無ければ `juiz idl` を使います。ソースからビルドするときは同じソースの `juiz-idl` をビルドして使います)。
@@ -340,6 +340,22 @@ juiz -f typed_mismatch.conf -d
 #     2: Type examples.geometry.Twist2D@sha256:115b9e0f… cannot be read as examples.geometry.Pose2D@sha256:123b8c15… at 'Pose2D': record name examples.geometry.Twist2D does not match examples.geometry.Pose2D (add an alias to read it)
 ```
 
+### アプリを .juizapp で配る
+
+`packages/talker_listener/` を、1 つのファイル (`.juizapp`、zip) にまとめて配れます (juiz 0.0.28 から)。受け取った人は、CMake も C++ のコンパイラも無しに `juiz run` だけで動かせます。
+
+```sh
+python3 scripts/make_packages.py      # 先に cmake --build build でビルドしておく
+# Packed talker_listener 0.1.0 (x86_64-unknown-linux-gnu; 6 files) into .../dist/talker_listener-0.1.0-x86_64-unknown-linux-gnu.juizapp
+juiz run dist/talker_listener-0.1.0-x86_64-unknown-linux-gnu.juizapp
+# talker_cpp: Hello, Juiz!
+# listener_cpp: Hello, Juiz!
+```
+
+`packages/talker_listener/` に置くのはマニフェスト `juizapp.yaml` と設定ファイル `app.conf` だけです。`app.conf` はプラグインを `path: "plugins/{target}"` で参照し、`scripts/make_packages.py` が `build/plugins` のプラグインと `libjuiz_sdk` を `plugins/<この機械のターゲット>/` に写してから `juiz pack --target <ターゲット>` を呼びます。
+プラグインの RPATH は自身の場所 (`$ORIGIN` / `@loader_path`) だけにしてあるので (`cmake/Juiz.cmake`)、隣に置いた `libjuiz_sdk` が使われます。Windows の juiz はプラグインの DLL の隣から `juiz_sdk.dll` を探します。
+タグ (`v*`) を付けると、CI が Linux (x86_64) と Windows (x86_64) で作った `.juizapp` を [Releases](https://github.com/OpenJUIZ/juiz_examples_cpp/releases) に載せます。
+
 ## 構成
 
 | パス | 内容 |
@@ -351,6 +367,8 @@ juiz -f typed_mismatch.conf -d
 | `python/` | データ型のサンプルで C++ の Process とつなぐ Python の Process |
 | `cmake/Juiz.cmake` | juiz のヘッダと libjuiz_sdk (Releases のアーカイブ)・juiz-idl を用意し、`add_juiz_process()`・`juiz_generate_types()` などを定義する |
 | `*.conf` | 各サンプルを動かすための juiz の設定ファイル |
+| `packages/` | `.juizapp` にするアプリのマニフェストと設定ファイル |
+| `scripts/make_packages.py` | ビルドしたプラグインを `packages/` のアプリに写し、`dist/` に `.juizapp` を作るスクリプト |
 | `tests/test_examples.py` | 上のサンプルを起動して呼び出し、結果を確かめるテスト (ビルドのあと `python3 tests/test_examples.py`)。CI でも実行する |
 
 ## 自分で書くときは
@@ -366,7 +384,7 @@ Container は `add_juiz_container()`、ContainerProcess は `add_juiz_container_
 
 ## juiz の版について
 
-CMake が取得する juiz (libjuiz_sdk のアーカイブ) の版は `JUIZ_GIT_TAG` で決まります。既定値は `v0.0.27` で、crates.io の juiz_app 0.0.27 と組み合わせて使います。
+CMake が取得する juiz (libjuiz_sdk のアーカイブ) の版は `JUIZ_GIT_TAG` で決まります。既定値は `v0.0.28` で、crates.io の juiz_app 0.0.28 と組み合わせて使います。
 別の版を使うときは、`cargo install juiz_app` で入れた版と合わせて指定してください。juiz は版の違う libjuiz_sdk でビルドしたプラグインを読み込みません。
 
 ```sh
