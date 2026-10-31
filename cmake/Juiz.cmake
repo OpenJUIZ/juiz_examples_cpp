@@ -110,9 +110,9 @@ endif()
 
 if(JUIZ_SDK_ARCHIVE_DIR)
   # アーカイブ: libjuiz_sdk をプラグインの出力先にコピーし、ヘッダはアーカイブのものを使う
-  # (cppjuiz のヘッダは cjuiz のヘッダを相対パスで include するので、アーカイブの配置のまま使う)
   message(STATUS "Using libjuiz_sdk from ${JUIZ_SDK_ARCHIVE_DIR}")
   set(JUIZ_CPP_INCLUDE_DIR "${JUIZ_SDK_ARCHIVE_DIR}/cppjuiz/include")
+  set(JUIZ_C_INCLUDE_DIR "${JUIZ_SDK_ARCHIVE_DIR}/cjuiz/include")
   file(MAKE_DIRECTORY ${JUIZ_PLUGIN_DIR})
   file(COPY "${JUIZ_SDK_ARCHIVE_DIR}/${JUIZ_SDK_ARCHIVE_LIBRARY_SUBDIR}/${JUIZ_SDK_LIBRARY_NAME}" DESTINATION ${JUIZ_PLUGIN_DIR})
   set(JUIZ_SDK_IMPORT_LIBRARY "${JUIZ_SDK_ARCHIVE_DIR}/lib/juiz_sdk.dll.lib")
@@ -131,6 +131,7 @@ else()
   endif()
 
   set(JUIZ_CPP_INCLUDE_DIR "${JUIZ_SOURCE_DIR}/bindings/cppjuiz/include")
+  set(JUIZ_C_INCLUDE_DIR "${JUIZ_SOURCE_DIR}/bindings/cjuiz/include")
   if(NOT EXISTS "${JUIZ_CPP_INCLUDE_DIR}/juiz/juiz.h")
     message(FATAL_ERROR "juiz の C++ ヘッダが見つかりません: ${JUIZ_CPP_INCLUDE_DIR}")
   endif()
@@ -158,7 +159,8 @@ add_library(juiz_sdk SHARED IMPORTED GLOBAL)
 set_target_properties(juiz_sdk PROPERTIES
   IMPORTED_LOCATION ${JUIZ_SDK_LIBRARY}
   IMPORTED_NO_SONAME TRUE
-  INTERFACE_INCLUDE_DIRECTORIES "${JUIZ_CPP_INCLUDE_DIR}"
+  # cppjuiz のヘッダは C のヘッダを #include "juiz_sdk.h" で読む (juiz#278) ので、cjuiz/include も足す
+  INTERFACE_INCLUDE_DIRECTORIES "${JUIZ_CPP_INCLUDE_DIR};${JUIZ_C_INCLUDE_DIR}"
   # ヘッダとサンプルは日本語のコメントを含む BOM なしの UTF-8。MSVC は既定でシステムのコードページ
   # (日本語の Windows では CP932) で読むので /utf-8 を付ける
   INTERFACE_COMPILE_OPTIONS "$<$<CXX_COMPILER_ID:MSVC>:/utf-8>"
