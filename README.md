@@ -1,7 +1,7 @@
 # juiz_examples_cpp
 
 ロボット・IoT 向けミドルウェア [juiz](https://github.com/OpenJUIZ/juiz) の C++ 版サンプル集です。
-`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.1.0 を使います。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz の [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から自動で取得するので、juiz のソースを手元に用意したり、`libjuiz_sdk` をビルドしたりする必要はありません。
+`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.2.0 を使います。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz の [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から自動で取得するので、juiz のソースを手元に用意したり、`libjuiz_sdk` をビルドしたりする必要はありません。
 
 Rust 版は [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust)、Python 版は [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) にあります。
 
@@ -256,8 +256,8 @@ record Twist2D { double linear = 0.0; double angular = 0.0; }
 > データ型は juiz 0.0.23 から使えます。juiz コマンドと、Python の Process が使う pyjuiz は 0.0.23 以降を入れてください。
 >
 > ```sh
-> cargo install juiz_app --version 0.1.0 --locked
-> pip install pyjuiz==0.1.0
+> cargo install juiz_app --version 0.2.0 --locked
+> pip install pyjuiz==0.2.0
 > ```
 
 C++ の Process [process/pose_move_cpp](process/pose_move_cpp/pose_move_cpp.cpp) は、types/geometry.jidl から作った型 (`juiz_idl.h`) をそのまま引数と戻り値に使います。型は CMake の関数 `juiz_generate_types()` がビルドのときに作ります (生成器は PATH の `juiz-idl`、無ければ `juiz idl` を使います。ソースからビルドするときは同じソースの `juiz-idl` をビルドして使います)。
@@ -340,6 +340,74 @@ juiz -f typed_mismatch.conf -d
 #     2: Type examples.geometry.Twist2D@sha256:115b9e0f… cannot be read as examples.geometry.Pose2D@sha256:123b8c15… at 'Pose2D': record name examples.geometry.Twist2D does not match examples.geometry.Pose2D (add an alias to read it)
 ```
 
+### Transformations: 部品の位置関係を木にする
+
+ロボットの部品 (台車・雲台・カメラ) を Container にし、部品同士のつながり (Transform) と基点 (Anchor) を設定ファイルに書くと、juiz が各部品の位置姿勢 (ContainerPose) を計算します。
+
+> juiz 0.2.0 から使える機能です。
+
+`transformations.conf` の木は次のとおりです。`map` と `odom` は juiz に組み込みの Anchor で、プラグインは要りません。
+
+```text
+map (PeriodicExecutionAnchor, 10 Hz)     … 10 Hz で木をたどって位置姿勢を計算し直す
+└─ odom (StaticAnchor)                   … 書き込みがあったときだけ計算し直す。map から (1, 2, 0) ずれている
+   └─ base0 (台車 mobile_base_cpp)        … move0 がオドメトリを set_pose で書く
+      └─ pantilt0 (雲台 pantilt_cpp)      … 台車の (0.1, 0, 0.3) に付く。pan0 がパン角を書く
+         └─ camera0 (カメラ camera_cpp)   … 雲台の (0.05, 0, 0.02) に付く。Transform だけ
+```
+
+部品は `component/mobile_robot_cpp` の 1 つの Component です。ContainerProcess の中では `juiz::pose(container, "map")` で読み、`juiz::set_pose(container, "odom", pose)` で書きます (`juiz/pose.h`)。`set_pose` は親 → 自分の Transform を書き換えるので、子の雲台・カメラも一緒に動きます。
+
+```cpp
+std::optional<juiz::Value> mobile_base_cpp_move(MobileBase* base, const double vx, const double omega, const double dt,
+                                                const std::string& reference) {
+    base->x += vx * std::cos(base->theta) * dt;
+    base->y += vx * std::sin(base->theta) * dt;
+    base->theta += omega * dt;
+    auto p = juiz::set_pose(base, reference, yaw_pose(base->x, base->y, 0.0, base->theta));
+    return juiz::pose_to_value(p, reference);
+}
+```
+
+また `pose_listeners:` で、台車の位置姿勢が書かれたら Process `print0` (`pose_print_cpp`) を呼ぶ Pose 通知を登録しています。
+
+```sh
+juiz -f transformations.conf -d
+```
+
+別の端末で台車を動かし、雲台を 90 度回します。
+
+```sh
+juiz container-process call "http://127.0.0.1:8000/container_process/move0::mobile_base_cpp_move:base0" '{"vx": 1.0, "dt": 1.0}' -p
+# => CapsulePtr((value:Value({"header":{"frame_id":"odom",...},"pose":{"orientation":{...},"position":{"x":1.0,"y":0.0,"z":0.0}}}), option: []))
+juiz container-process call "http://127.0.0.1:8000/container_process/pan0::pantilt_cpp_set_pan:pantilt0" '{"pan": 1.5707963267948966}' -p
+```
+
+1 つ目の呼び出しで、juiz を起動した端末に Pose 通知の出力が出ます。
+
+```text
+pose_print_cpp: x=1.00 y=0.00 yaw=0.0deg (from odom)
+```
+
+カメラの位置姿勢を読みます。雲台が回ったので、カメラは台車の左 (y = 0.05) に来ています。`map` から見ると `map` → `odom` のずれ (1, 2, 0) が足されます。
+
+```sh
+juiz container pose camera0 --reference odom
+# => position: x=1.1, y=0.05, z=0.32 (JSON の PoseStamped)
+juiz container pose camera0 --reference map
+# => position: x=2.1, y=2.05, z=0.32
+juiz container-process call "http://127.0.0.1:8000/container_process/camera_pose0::camera_cpp_pose:camera0" '{"reference": "map"}' -p
+juiz anchor tree map
+# map  position (0, 0, 0)  orientation (0, 0, 0, 1)
+# └─ odom  position (1, 2, 0)  orientation (0, 0, 0, 1)
+#    └─ base0  position (2, 2, 0)  orientation (0, 0, 0, 1)
+#       └─ pantilt0  position (2.1, 2, 0.3)  orientation (0, 0, 0.7071067811865475, 0.7071067811865476)
+#          └─ camera0  position (2.1, 2.05, 0.32)  orientation (0, 0, 0.7071067811865475, 0.7071067811865476)
+```
+
+`map` は Periodic なので、書き込みの直後に読むと最大 1 周期 (0.1 秒) 古い値が返ります。`odom` は Static なので、`set_pose` が戻った時点で新しい値になっています。
+管理画面 (`http://127.0.0.1:8000/ui`) の「変換木」でも木と位置姿勢を見られます。
+
 ### アプリを .juizapp で配る
 
 `packages/talker_listener/` を、1 つのファイル (`.juizapp`、zip) にまとめて配れます (juiz 0.0.28 から)。受け取った人は、CMake も C++ のコンパイラも無しに `juiz run` だけで動かせます。
@@ -362,7 +430,7 @@ juiz run dist/talker_listener-0.1.0-x86_64-unknown-linux-gnu.juizapp
 | --- | --- |
 | `process/` | Process (入力と出力を持つ冪等な関数) のサンプル |
 | `container/` | Container (状態を持つ) と ContainerProcess のサンプル |
-| `component/` | 複数の要素を 1 つのライブラリにまとめた Component のサンプル |
+| `component/` | 複数の要素を 1 つのライブラリにまとめた Component のサンプル (`mobile_robot_cpp` は Transformations の部品) |
 | `types/` | 4 つのサンプルリポジトリで共通に使う型 (JIDL) |
 | `python/` | データ型のサンプルで C++ の Process とつなぐ Python の Process |
 | `cmake/Juiz.cmake` | juiz のヘッダと libjuiz_sdk (Releases のアーカイブ)・juiz-idl を用意し、`add_juiz_process()`・`juiz_generate_types()` などを定義する |
@@ -384,7 +452,7 @@ Container は `add_juiz_container()`、ContainerProcess は `add_juiz_container_
 
 ## juiz の版について
 
-CMake が取得する juiz (libjuiz_sdk のアーカイブ) の版は `JUIZ_GIT_TAG` で決まります。既定値は `v0.1.0` で、crates.io の juiz_app 0.1.0 と組み合わせて使います。
+CMake が取得する juiz (libjuiz_sdk のアーカイブ) の版は `JUIZ_GIT_TAG` で決まります。既定値は `v0.2.0` で、crates.io の juiz_app 0.2.0 と組み合わせて使います。
 別の版を使うときは、`cargo install juiz_app` で入れた版と合わせて指定してください。juiz は版の違う libjuiz_sdk でビルドしたプラグインを読み込みません。
 
 ```sh
