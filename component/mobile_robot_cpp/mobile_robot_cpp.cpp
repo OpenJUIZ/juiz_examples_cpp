@@ -9,14 +9,13 @@
 // - pantilt_cpp_set_pan はパン角を書く (台車から見た自分の向きだけを変える)。
 // - camera_cpp_pose は基準から見た自分の位置姿勢を juiz::pose で読む。カメラは Transform で雲台につながっているだけ。
 // - pose_print_cpp は Pose 通知 (conf の pose_listeners:) で呼ばれる Process。
+// MSVC の <cmath> は _USE_MATH_DEFINES が無いと M_PI を定義しない。最初の include より前に書く
+#define _USE_MATH_DEFINES
 #include <cmath>
 #include <cstdio>
 #include <iostream>
 #include <string>
 #include "juiz/juiz.h"
-
-// M_PI は MSVC では _USE_MATH_DEFINES が要るので、自分で定義する
-static constexpr double PI = 3.14159265358979323846;
 
 // z 軸まわりに yaw [rad] 回す姿勢で、位置 (x, y, z) の juiz_pose を作る
 static juiz_pose yaw_pose(double x, double y, double z, double yaw) {
@@ -110,7 +109,7 @@ std::optional<std::string> pose_print_cpp(const juiz::Value& pose) {
     const double yaw = std::atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz));
     char buf[160];
     std::snprintf(buf, sizeof(buf), "pose_print_cpp: x=%.2f y=%.2f yaw=%.1fdeg (from %s)", number(position["x"]),
-                  number(position["y"]), yaw * 180.0 / PI, pose["header"]["frame_id"].stringValue().c_str());
+                  number(position["y"]), yaw * 180.0 / M_PI, pose["header"]["frame_id"].stringValue().c_str());
     std::cout << buf << std::endl;
     return std::string(buf);
 }
