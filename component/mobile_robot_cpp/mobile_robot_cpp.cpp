@@ -15,6 +15,9 @@
 #include <string>
 #include "juiz/juiz.h"
 
+// M_PI は MSVC では _USE_MATH_DEFINES が要るので、自分で定義する
+static constexpr double PI = 3.14159265358979323846;
+
 // z 軸まわりに yaw [rad] 回す姿勢で、位置 (x, y, z) の juiz_pose を作る
 static juiz_pose yaw_pose(double x, double y, double z, double yaw) {
     return juiz::make_pose(x, y, z, 0.0, 0.0, std::sin(yaw / 2), std::cos(yaw / 2));
@@ -107,7 +110,7 @@ std::optional<std::string> pose_print_cpp(const juiz::Value& pose) {
     const double yaw = std::atan2(2 * (qw * qz + qx * qy), 1 - 2 * (qy * qy + qz * qz));
     char buf[160];
     std::snprintf(buf, sizeof(buf), "pose_print_cpp: x=%.2f y=%.2f yaw=%.1fdeg (from %s)", number(position["x"]),
-                  number(position["y"]), yaw * 180.0 / M_PI, pose["header"]["frame_id"].stringValue().c_str());
+                  number(position["y"]), yaw * 180.0 / PI, pose["header"]["frame_id"].stringValue().c_str());
     std::cout << buf << std::endl;
     return std::string(buf);
 }
