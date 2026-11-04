@@ -8,6 +8,7 @@
 // - mobile_base_cpp_move はオドメトリを積分して、odom から見た自分の位置姿勢を juiz::set_pose で書く。
 // - pantilt_cpp_set_pan はパン角を書く (台車から見た自分の向きだけを変える)。
 // - camera_cpp_pose は基準から見た自分の位置姿勢を juiz::pose で読む。カメラは Transform で雲台につながっているだけ。
+//   読むだけなので readonly にしている。
 // - pose_print_cpp は Pose 通知 (conf の pose_listeners:) で呼ばれる Process。
 // MSVC の <cmath> は _USE_MATH_DEFINES が無いと M_PI を定義しない。最初の include より前に書く
 #define _USE_MATH_DEFINES
@@ -84,10 +85,14 @@ Camera* camera_cpp(juiz::CapsuleMap) {
 }
 COMPONENT_CONTAINER_FACTORY(camera_cpp_manif, camera_cpp);
 
-// 基準 reference から見た自分の位置姿勢 (juiz_std.geometry.PoseStamped の辞書)
+// 基準 reference から見た自分の位置姿勢 (juiz_std.geometry.PoseStamped の辞書)。
+// 読むだけなので readonly にする (OpenJUIZ/juiz#377)。manifest に readonly() を付け、Container を const のポインタで受け取る。
+// juiz は Container を読み出しロックで呼ぶので、同じ Container の readonly 同士は並行に走る。
+// const の Container では juiz::set_pose はコンパイルエラーになる
 static auto camera_cpp_pose_manif = ProcessManifest("camera_cpp_pose")
+    .readonly()
     .add_string_arg("reference", "reference container", "map");
-std::optional<juiz::Value> camera_cpp_pose(Camera* camera, const std::string& reference) {
+std::optional<juiz::Value> camera_cpp_pose(const Camera* camera, const std::string& reference) {
     return juiz::pose_to_value(juiz::pose(camera, reference), reference);
 }
 COMPONENT_CONTAINER_PROCESS_FACTORY(Camera, camera_cpp_pose_manif, camera_cpp_pose);
