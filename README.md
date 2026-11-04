@@ -1,7 +1,7 @@
 # juiz_examples_cpp
 
 ロボット・IoT 向けミドルウェア [juiz](https://github.com/OpenJUIZ/juiz) の C++ 版サンプル集です。
-`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.2.1 を使います。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz の [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から自動で取得するので、juiz のソースを手元に用意したり、`libjuiz_sdk` をビルドしたりする必要はありません。
+`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.2.1 を使います (readonly の ContainerProcess の例だけは juiz の次の版の機能を使うので、公開までは juiz の main のコミットを使います。[読むだけの ContainerProcess](#読むだけの-containerprocess-readonly) を参照)。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz の [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から自動で取得するので、juiz のソースを手元に用意したり、`libjuiz_sdk` をビルドしたりする必要はありません。
 
 Rust 版は [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust)、Python 版は [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) にあります。
 
@@ -408,6 +408,31 @@ juiz anchor tree map
 `map` は Periodic なので、書き込みの直後に読むと最大 1 周期 (0.1 秒) 古い値が返ります。`odom` は Static なので、`set_pose` が戻った時点で新しい値になっています。
 管理画面 (`http://127.0.0.1:8000/ui`) の「変換木」でも木と位置姿勢を見られます。
 
+#### 読むだけの ContainerProcess: readonly
+
+カメラの `camera_cpp_pose` は位置姿勢を読むだけなので、readonly の ContainerProcess にしています。manifest に `.readonly()` を付け、Container を `const` のポインタで受け取ります。
+
+```cpp
+static auto camera_cpp_pose_manif = ProcessManifest("camera_cpp_pose")
+    .readonly()
+    .add_string_arg("reference", "reference container", "map");
+std::optional<juiz::Value> camera_cpp_pose(const Camera* camera, const std::string& reference) {
+    return juiz::pose_to_value(juiz::pose(camera, reference), reference);
+}
+COMPONENT_CONTAINER_PROCESS_FACTORY(Camera, camera_cpp_pose_manif, camera_cpp_pose);
+```
+
+juiz は readonly の ContainerProcess を Container の読み出しロックで呼ぶので、同じ Container の readonly 同士は並行に走ります (readonly でないものとは順番に走ります)。`const` の Container に `juiz::set_pose` を呼ぶとコンパイルエラーになります。
+readonly かどうかは ContainerProcess の情報 (HTTP の API) に出ます。
+
+```sh
+curl "http://127.0.0.1:8000/api/container_process/profile_full?identifier=core://core/container_process/camera_pose0::camera_cpp_pose:camera0"
+# => {..."readonly":true,...}
+```
+
+> juiz の次の版 (0.2.1 の次) で入る機能です。公開までは `cmake/Juiz.cmake` の `JUIZ_GIT_TAG` を juiz の main のコミットにしてあり、libjuiz_sdk は juiz のソースからビルドします。juiz コマンドも同じコミットから入れてください:
+> `cargo install juiz_app --git https://github.com/OpenJUIZ/juiz --rev 9631340ddc68f6543b26185368f6ec8fe3122834 --locked`
+
 #### System をまたぐ: transformations_map.conf と transformations_robot.conf
 
 上の木を、地図の System とロボットの System の 2 つに分けた版です。地図 (`map`) を持つ System と、台車・雲台・カメラを持つ System を別のプロセスで動かし、ロボットの System から `map` を基準に読めます。
@@ -521,6 +546,7 @@ Container は `add_juiz_container()`、ContainerProcess は `add_juiz_container_
 ## juiz の版について
 
 CMake が取得する juiz (libjuiz_sdk のアーカイブ) の版は `JUIZ_GIT_TAG` で決まります。既定値は `v0.2.1` で、crates.io の juiz_app 0.2.1 と組み合わせて使います。
+(今は readonly の ContainerProcess のサンプルのために、既定値を juiz の main のコミット `9631340ddc68f6543b26185368f6ec8fe3122834` にしています。次の版の公開後にその版のタグに戻します。)
 別の版を使うときは、`cargo install juiz_app` で入れた版と合わせて指定してください。juiz は版の違う libjuiz_sdk でビルドしたプラグインを読み込みません。
 
 ```sh
