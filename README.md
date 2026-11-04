@@ -1,7 +1,7 @@
 # juiz_examples_cpp
 
 ロボット・IoT 向けミドルウェア [juiz](https://github.com/OpenJUIZ/juiz) の C++ 版サンプル集です。
-`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.2.1 を使います (readonly の ContainerProcess の例だけは juiz の次の版の機能を使うので、公開までは juiz の main のコミットを使います。[読むだけの ContainerProcess](#読むだけの-containerprocess-readonly) を参照)。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz の [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から自動で取得するので、juiz のソースを手元に用意したり、`libjuiz_sdk` をビルドしたりする必要はありません。
+`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.2.2 を使います。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz の [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から自動で取得するので、juiz のソースを手元に用意したり、`libjuiz_sdk` をビルドしたりする必要はありません。
 
 Rust 版は [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust)、Python 版は [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) にあります。
 
@@ -256,8 +256,8 @@ record Twist2D { double linear = 0.0; double angular = 0.0; }
 > データ型は juiz 0.0.23 から使えます。juiz コマンドと、Python の Process が使う pyjuiz は 0.0.23 以降を入れてください。
 >
 > ```sh
-> cargo install juiz_app --version 0.2.1 --locked
-> pip install pyjuiz==0.2.1
+> cargo install juiz_app --version 0.2.2 --locked
+> pip install pyjuiz==0.2.2
 > ```
 
 C++ の Process [process/pose_move_cpp](process/pose_move_cpp/pose_move_cpp.cpp) は、types/geometry.jidl から作った型 (`juiz_idl.h`) をそのまま引数と戻り値に使います。型は CMake の関数 `juiz_generate_types()` がビルドのときに作ります (生成器は PATH の `juiz-idl`、無ければ `juiz idl` を使います。ソースからビルドするときは同じソースの `juiz-idl` をビルドして使います)。
@@ -430,8 +430,7 @@ curl "http://127.0.0.1:8000/api/container_process/profile_full?identifier=core:/
 # => {..."readonly":true,...}
 ```
 
-> juiz の次の版 (0.2.1 の次) で入る機能です。公開までは `cmake/Juiz.cmake` の `JUIZ_GIT_TAG` を juiz の main のコミットにしてあり、libjuiz_sdk は juiz のソースからビルドします。juiz コマンドも同じコミットから入れてください:
-> `cargo install juiz_app --git https://github.com/OpenJUIZ/juiz --rev 9631340ddc68f6543b26185368f6ec8fe3122834 --locked`
+> juiz 0.2.2 から使える機能です。
 
 #### System をまたぐ: transformations_map.conf と transformations_robot.conf
 
@@ -545,8 +544,8 @@ Container は `add_juiz_container()`、ContainerProcess は `add_juiz_container_
 
 ## juiz の版について
 
-CMake が取得する juiz (libjuiz_sdk のアーカイブ) の版は `JUIZ_GIT_TAG` で決まります。既定値は `v0.2.1` で、crates.io の juiz_app 0.2.1 と組み合わせて使います。
-(今は readonly の ContainerProcess のサンプルのために、既定値を juiz の main のコミット `9631340ddc68f6543b26185368f6ec8fe3122834` にしています。次の版の公開後にその版のタグに戻します。)
+CMake が取得する juiz (libjuiz_sdk のアーカイブ) の版は `JUIZ_GIT_TAG` で決まります。既定値は `v0.2.2` で、crates.io の juiz_app 0.2.2 と組み合わせて使います。
+
 別の版を使うときは、`cargo install juiz_app` で入れた版と合わせて指定してください。juiz は版の違う libjuiz_sdk でビルドしたプラグインを読み込みません。
 
 ```sh

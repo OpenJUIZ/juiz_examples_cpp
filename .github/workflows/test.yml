@@ -9,11 +9,7 @@ on:
 
 env:
   # README の手順で使う juiz_app と pyjuiz の版。cmake/Juiz.cmake の JUIZ_GIT_TAG と合わせる
-  JUIZ_VERSION: "0.2.1"
-  # readonly の ContainerProcess (component/mobile_robot_cpp の camera_cpp_pose) は juiz の次の版で入る機能を使うので、
-  # 公開までは juiz の main のコミットから入れる。cmake/Juiz.cmake の JUIZ_GIT_TAG と合わせる。
-  # 公開後は空にし、JUIZ_VERSION の版の指定と libjuiz_sdk のアーカイブ (matrix の archive) に戻す
-  JUIZ_GIT_REV: "9631340ddc68f6543b26185368f6ec8fe3122834"
+  JUIZ_VERSION: "0.2.2"
 
 jobs:
   examples:
@@ -23,8 +19,7 @@ jobs:
       matrix:
         # archive: libjuiz_sdk を GitHub Releases のアーカイブから取得する (既定)
         # source: juiz のソースから cargo でビルドする (アーカイブが無いときの手順)
-        # 公開前の juiz のコミットを使う間は、アーカイブが無いので source だけ
-        sdk: [source]
+        sdk: [archive, source]
     name: examples (${{ matrix.sdk }})
     steps:
       - uses: actions/checkout@v4
@@ -37,19 +32,19 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cargo/bin/juiz
-          key: juiz-app-${{ env.JUIZ_GIT_REV }}-${{ runner.os }}-${{ runner.arch }}
+          key: juiz-app-${{ env.JUIZ_VERSION }}-${{ runner.os }}-${{ runner.arch }}
       - name: juiz コマンドをインストールする
         if: steps.juiz-cache.outputs.cache-hit != 'true'
-        run: cargo install juiz_app --git https://github.com/OpenJUIZ/juiz --rev "$JUIZ_GIT_REV" --locked
+        run: cargo install juiz_app --version "$JUIZ_VERSION" --locked
       # データ型のサンプル (typed_pose.conf) の Python の Process が pyjuiz を使う
       - name: pyjuiz をインストールする
-        run: python3 -m pip install --user --break-system-packages "pyjuiz @ git+https://github.com/OpenJUIZ/juiz@${JUIZ_GIT_REV}#subdirectory=bindings/pyjuiz"
+        run: python3 -m pip install --user --break-system-packages "pyjuiz==${JUIZ_VERSION}"
       - name: libjuiz_sdk のビルド結果のキャッシュ
         if: matrix.sdk == 'source'
         uses: actions/cache@v4
         with:
           path: build/juiz_sdk
-          key: juiz-sdk-${{ env.JUIZ_GIT_REV }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('cmake/Juiz.cmake') }}
+          key: juiz-sdk-${{ env.JUIZ_VERSION }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('cmake/Juiz.cmake') }}
       - name: サンプルをビルドする
         run: |
           cmake -S . -B build -DJUIZ_SDK_FROM_SOURCE=${{ matrix.sdk == 'source' && 'ON' || 'OFF' }}
@@ -79,15 +74,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      # 公開前の juiz のコミットを使う間は、juiz-cli を git のソースからビルドし、libjuiz_sdk もソースからビルドする
       - name: juiz コマンドをインストールする
-        run: python -m pip install "pyjuiz @ git+https://github.com/OpenJUIZ/juiz@$env:JUIZ_GIT_REV#subdirectory=bindings/pyjuiz" "juiz-cli @ git+https://github.com/OpenJUIZ/juiz@$env:JUIZ_GIT_REV#subdirectory=bindings/juiz_py"
+        run: python -m pip install "juiz-cli==$env:JUIZ_VERSION"
       - name: サンプルをビルドする
         run: |
           cmake -S . -B build
           cmake --build build --config Release -j
       - name: アーカイブの libjuiz_sdk を使ったか確かめる
-        if: env.JUIZ_GIT_REV == ''
         shell: bash
         run: |
           test -f "build/juiz_sdk_archive/juiz_sdk-${JUIZ_VERSION}-x86_64-pc-windows-msvc/bin/juiz_sdk.dll"
