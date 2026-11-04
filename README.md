@@ -552,6 +552,12 @@ CMake が取得する juiz (libjuiz_sdk のアーカイブ) の版は `JUIZ_GIT_
 cmake -S . -B build -DJUIZ_GIT_TAG=v<版>
 ```
 
+PowerShell では、`-` で始まる引数が `.` の位置で切られ、CMake に `JUIZ_GIT_TAG=v0` だけが渡ってしまいます (`Failed to checkout tag: 'v0'` になります)。引数全体を引用符で囲んでください。
+
+```powershell
+cmake -S . -B build '-DJUIZ_GIT_TAG=v0.2.2'
+```
+
 アーカイブは 0.0.26 からなので、それより前の版やコミットを指定したときは juiz のソースからビルドします。
 
 ## ライセンス
