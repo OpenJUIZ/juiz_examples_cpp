@@ -10,6 +10,10 @@ on:
 env:
   # README の手順で使う juiz_app と pyjuiz の版。cmake/Juiz.cmake の JUIZ_GIT_TAG と合わせる
   JUIZ_VERSION: "0.2.0"
+  # System をまたぐ Transform のサンプル (transformations_robot.conf) は juiz の次の版で入る機能を使うので、
+  # 公開までは juiz コマンドと pyjuiz を juiz の main のコミットから入れる。libjuiz_sdk は 0.2.0 のままでよい
+  # (プラグインの C ABI は変わっていない)。公開後は JUIZ_GIT_REV を消し、JUIZ_VERSION の版の指定に戻す
+  JUIZ_GIT_REV: "e28e9297454fa2ff86f5df4a812690c88a5b8722"
 
 jobs:
   examples:
@@ -32,13 +36,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cargo/bin/juiz
-          key: juiz-app-${{ env.JUIZ_VERSION }}-${{ runner.os }}-${{ runner.arch }}
+          key: juiz-app-${{ env.JUIZ_GIT_REV }}-${{ runner.os }}-${{ runner.arch }}
       - name: juiz コマンドをインストールする
         if: steps.juiz-cache.outputs.cache-hit != 'true'
-        run: cargo install juiz_app --version "$JUIZ_VERSION" --locked
+        run: cargo install juiz_app --git https://github.com/OpenJUIZ/juiz --rev "$JUIZ_GIT_REV" --locked
       # データ型のサンプル (typed_pose.conf) の Python の Process が pyjuiz を使う
       - name: pyjuiz をインストールする
-        run: python3 -m pip install --user --break-system-packages "pyjuiz==${JUIZ_VERSION}"
+        run: python3 -m pip install --user --break-system-packages "pyjuiz @ git+https://github.com/OpenJUIZ/juiz@${JUIZ_GIT_REV}#subdirectory=bindings/pyjuiz"
       - name: libjuiz_sdk のビルド結果のキャッシュ
         if: matrix.sdk == 'source'
         uses: actions/cache@v4
@@ -74,8 +78,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      # 公開前の juiz のコミットを使う間は、juiz-cli を git のソースからビルドする (Rust が要る。ランナーに入っている)
       - name: juiz コマンドをインストールする
-        run: python -m pip install "juiz-cli==$env:JUIZ_VERSION"
+        run: python -m pip install "pyjuiz @ git+https://github.com/OpenJUIZ/juiz@$env:JUIZ_GIT_REV#subdirectory=bindings/pyjuiz" "juiz-cli @ git+https://github.com/OpenJUIZ/juiz@$env:JUIZ_GIT_REV#subdirectory=bindings/juiz_py"
       - name: サンプルをビルドする
         run: |
           cmake -S . -B build
