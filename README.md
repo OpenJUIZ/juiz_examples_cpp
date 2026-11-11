@@ -5,6 +5,8 @@
 
 Rust 版は [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust)、Python 版は [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) にあります。
 
+> **自分の部品を新しく作り始めるときは**、サンプルを写す代わりに `juiz pkg create my_robot -b cpp` で雛形を作れます (juiz 0.2.6 から)。ビルド・起動・呼び出し・`.juizapp` での配布までそのまま通る形で、SDK の版も `juiz` コマンドと同じ版で書かれます。詳しくは公式サイトの [雛形から始める (juiz pkg)](https://openjuiz.github.io/ja/guides/pkg/) を見てください。
+
 ## しくみ
 
 C++ で書いた Process や Container は共有ライブラリ (`lib*.so`、macOS では `lib*.dylib`、Windows では `*.dll`) としてビルドし、`juiz` コマンドが設定ファイル (`*.conf`) を読んでプラグインとして読み込みます。
