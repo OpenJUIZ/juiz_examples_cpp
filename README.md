@@ -1,7 +1,7 @@
 # juiz_examples_cpp
 
 ロボット・IoT 向けミドルウェア [juiz](https://github.com/OpenJUIZ/juiz) の C++ 版サンプル集です。
-`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.2.8 を使います。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz の [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から自動で取得するので、juiz のソースを手元に用意したり、`libjuiz_sdk` をビルドしたりする必要はありません。
+`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.2.9 を使います。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz の [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から自動で取得するので、juiz のソースを手元に用意したり、`libjuiz_sdk` をビルドしたりする必要はありません。
 
 Rust 版は [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust)、Python 版は [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) にあります。
 
@@ -258,8 +258,8 @@ record Twist2D { double linear = 0.0; double angular = 0.0; }
 > データ型は juiz 0.0.23 から使えます。juiz コマンドと、Python の Process が使う pyjuiz は 0.0.23 以降を入れてください。
 >
 > ```sh
-> cargo install juiz_app --version 0.2.8 --locked
-> pip install pyjuiz==0.2.8
+> cargo install juiz_app --version 0.2.9 --locked
+> pip install pyjuiz==0.2.9
 > ```
 
 C++ の Process [process/pose_move_cpp](process/pose_move_cpp/pose_move_cpp.cpp) は、types/geometry.jidl から作った型 (`juiz_idl.h`) をそのまま引数と戻り値に使います。型は CMake の関数 `juiz_generate_types()` がビルドのときに作ります (生成器は PATH の `juiz-idl`、無ければ `juiz idl` を使います。ソースからビルドするときは同じソースの `juiz-idl` をビルドして使います)。
@@ -434,6 +434,49 @@ curl "http://127.0.0.1:8000/api/container_process/profile_full?identifier=core:/
 
 > juiz 0.2.2 から使える機能です。
 
+#### 3D モデル: 部品の形を付ける
+
+Container に 3D モデルのファイルを付けると、管理画面の「3D」で木を立体で見られます (OpenJUIZ/juiz#385)。設定ファイルの Container に `model:` を書くだけで、プラグインのコードは変えません。
+
+> juiz 0.2.9 から使える機能です。
+
+`transformations.conf` (と `transformations_map.conf`・`transformations_robot.conf`) では、形式をひととおり使っています。
+
+| Container | ファイル | 形式 | 書き方の例 |
+|---|---|---|---|
+| `map` (床) | `models/floor.glb` | glTF (.glb) | glTF は Y 上なので、juiz が x 軸まわりに +90° 回して Z 上にそろえる (`up_axis` は書かない) |
+| `base0` (台車) | `models/mobile_base.glb` | glTF (.glb) | 前 (+x) に黄色の三角の印 |
+| `pantilt0` (雲台) | `models/pantilt.sdf` | SDF (手書き) | 円柱と箱を `<pose>` で並べる。`<material>` の無い台座は `color` で塗る |
+| `camera0` (カメラ) | `models/camera.stl` | STL | mm で作ったものなので `scale: 0.001`。原点が背面なので `origin` で 15 mm 後ろにずらす |
+
+```yaml
+  - type_name: camera_cpp
+    name: camera0
+    model:
+      path: models/camera.stl          # 設定ファイルからの相対パス
+      scale: 0.001                     # mm → m
+      origin:                          # Container の座標から見たモデルの位置
+        translation: {x: -0.015, y: 0.0, z: 0.0}
+      color: "#e0e0e0"                 # 色を持たない形式の表示色
+```
+
+.glb と .stl は `scripts/make_models.py` が箱と円柱から作ったものです (Python の標準ライブラリだけで動きます。`python3 scripts/make_models.py` で作り直せます)。座標は juiz と同じメートル・x 前・y 左・z 上です。
+
+起動して、モデルの情報と中身を取り出せます。
+
+```sh
+juiz -f transformations.conf -d
+juiz container list --long
+# base0 の行の下に  model: glb 24.2 KiB (mobile_base.glb)
+juiz container model camera0 --info
+# => {"file_name": "camera.stl", "format": "stl", "scale": 0.001, ...}
+juiz container model base0 -o .
+# => wrote: ./mobile_base.glb (24760 bytes, glb)
+juiz model check models/pantilt.sdf      # System を起動せずにファイルを確かめる
+```
+
+管理画面 (`http://127.0.0.1:8000/ui`) の中央の「3D」を押し、右上で Anchor (`map` や `odom`) を選ぶと、台車・雲台・カメラが位置姿勢のとおりに置かれます。台車を動かしたり雲台を回したりすると、表示も追いかけます。System をまたぐ版では、ロボットの System の管理画面で `map(写し)` を選ぶと、地図の System にある床のモデルも一緒に出ます。
+
 #### System をまたぐ: transformations_map.conf と transformations_robot.conf
 
 上の木を、地図の System とロボットの System の 2 つに分けた版です。地図 (`map`) を持つ System と、台車・雲台・カメラを持つ System を別のプロセスで動かし、ロボットの System から `map` を基準に読めます。
@@ -528,9 +571,11 @@ juiz run dist/talker_listener-0.1.0-x86_64-unknown-linux-gnu.juizapp
 | `types/` | 4 つのサンプルリポジトリで共通に使う型 (JIDL) |
 | `python/` | データ型のサンプルで C++ の Process とつなぐ Python の Process |
 | `cmake/Juiz.cmake` | juiz のヘッダと libjuiz_sdk (Releases のアーカイブ)・juiz-idl を用意し、`add_juiz_process()`・`juiz_generate_types()` などを定義する |
+| `models/` | Transformations のサンプルの部品の 3D モデル (.glb・.stl・手書きの .sdf) |
 | `*.conf` | 各サンプルを動かすための juiz の設定ファイル |
 | `packages/` | `.juizapp` にするアプリのマニフェストと設定ファイル |
 | `scripts/make_packages.py` | ビルドしたプラグインを `packages/` のアプリに写し、`dist/` に `.juizapp` を作るスクリプト |
+| `scripts/make_models.py` | `models/` の .glb と .stl を箱と円柱から作るスクリプト |
 | `tests/test_examples.py` | 上のサンプルを起動して呼び出し、結果を確かめるテスト (ビルドのあと `python3 tests/test_examples.py`)。CI でも実行する |
 
 ## 自分で書くときは
@@ -546,7 +591,7 @@ Container は `add_juiz_container()`、ContainerProcess は `add_juiz_container_
 
 ## juiz の版について
 
-CMake が取得する juiz (libjuiz_sdk のアーカイブ) の版は `JUIZ_GIT_TAG` で決まります。既定値は `v0.2.8` で、crates.io の juiz_app 0.2.8 と組み合わせて使います。
+CMake が取得する juiz (libjuiz_sdk のアーカイブ) の版は `JUIZ_GIT_TAG` で決まります。既定値は `v0.2.9` で、crates.io の juiz_app 0.2.9 と組み合わせて使います。
 
 別の版を使うときは、`cargo install juiz_app` で入れた版と合わせて指定してください。juiz は版の違う libjuiz_sdk でビルドしたプラグインを読み込みません。
 
@@ -557,7 +602,7 @@ cmake -S . -B build -DJUIZ_GIT_TAG=v<版>
 PowerShell では、`-` で始まる引数が `.` の位置で切られ、CMake に `JUIZ_GIT_TAG=v0` だけが渡ってしまいます (`Failed to checkout tag: 'v0'` になります)。引数全体を引用符で囲んでください。
 
 ```powershell
-cmake -S . -B build '-DJUIZ_GIT_TAG=v0.2.8'
+cmake -S . -B build '-DJUIZ_GIT_TAG=v0.2.9'
 ```
 
 アーカイブは 0.0.26 からなので、それより前の版やコミットを指定したときは juiz のソースからビルドします。
