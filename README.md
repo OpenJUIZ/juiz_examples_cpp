@@ -1,7 +1,7 @@
 # juiz_examples_cpp
 
 ロボット・IoT 向けミドルウェア [juiz](https://github.com/OpenJUIZ/juiz) の C++ 版サンプル集です。
-`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.2.10 を使います。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz の [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から自動で取得するので、juiz のソースを手元に用意したり、`libjuiz_sdk` をビルドしたりする必要はありません。
+`juiz` コマンドは crates.io の [juiz_app](https://crates.io/crates/juiz_app) 0.2.11 を使います。C++ 用のヘッダと `libjuiz_sdk` はビルド時に CMake が juiz の [GitHub Releases](https://github.com/OpenJUIZ/juiz/releases) から自動で取得するので、juiz のソースを手元に用意したり、`libjuiz_sdk` をビルドしたりする必要はありません。
 
 Rust 版は [juiz_examples_rust](https://github.com/OpenJUIZ/juiz_examples_rust)、Python 版は [juiz_examples_python](https://github.com/OpenJUIZ/juiz_examples_python) にあります。
 
@@ -258,8 +258,8 @@ record Twist2D { double linear = 0.0; double angular = 0.0; }
 > データ型は juiz 0.0.23 から使えます。juiz コマンドと、Python の Process が使う pyjuiz は 0.0.23 以降を入れてください。
 >
 > ```sh
-> cargo install juiz_app --version 0.2.10 --locked
-> pip install pyjuiz==0.2.10
+> cargo install juiz_app --version 0.2.11 --locked
+> pip install pyjuiz==0.2.11
 > ```
 
 C++ の Process [process/pose_move_cpp](process/pose_move_cpp/pose_move_cpp.cpp) は、types/geometry.jidl から作った型 (`juiz_idl.h`) をそのまま引数と戻り値に使います。型は CMake の関数 `juiz_generate_types()` がビルドのときに作ります (生成器は PATH の `juiz-idl`、無ければ `juiz idl` を使います。ソースからビルドするときは同じソースの `juiz-idl` をビルドして使います)。
@@ -428,7 +428,7 @@ juiz は readonly の ContainerProcess を Container の読み出しロックで
 readonly かどうかは ContainerProcess の情報 (HTTP の API) に出ます。
 
 ```sh
-curl "http://127.0.0.1:8000/api/container_process/profile_full?identifier=core://core/container_process/camera_pose0::camera_cpp_pose:camera0"
+curl "http://127.0.0.1:8000/api/container_process/profile?identifier=core://core/container_process/camera_pose0::camera_cpp_pose:camera0"
 # => {..."readonly":true,...}
 ```
 
@@ -591,7 +591,7 @@ Container は `add_juiz_container()`、ContainerProcess は `add_juiz_container_
 
 ## juiz の版について
 
-CMake が取得する juiz (libjuiz_sdk のアーカイブ) の版は `JUIZ_GIT_TAG` で決まります。既定値は `v0.2.10` で、crates.io の juiz_app 0.2.10 と組み合わせて使います。
+CMake が取得する juiz (libjuiz_sdk のアーカイブ) の版は `JUIZ_GIT_TAG` で決まります。既定値は `v0.2.11` で、crates.io の juiz_app 0.2.11 と組み合わせて使います。
 
 別の版を使うときは、`cargo install juiz_app` で入れた版と合わせて指定してください。juiz は版の違う libjuiz_sdk でビルドしたプラグインを読み込みません。
 
@@ -602,7 +602,7 @@ cmake -S . -B build -DJUIZ_GIT_TAG=v<版>
 PowerShell では、`-` で始まる引数が `.` の位置で切られ、CMake に `JUIZ_GIT_TAG=v0` だけが渡ってしまいます (`Failed to checkout tag: 'v0'` になります)。引数全体を引用符で囲んでください。
 
 ```powershell
-cmake -S . -B build '-DJUIZ_GIT_TAG=v0.2.10'
+cmake -S . -B build '-DJUIZ_GIT_TAG=v0.2.11'
 ```
 
 アーカイブは 0.0.26 からなので、それより前の版やコミットを指定したときは juiz のソースからビルドします。
