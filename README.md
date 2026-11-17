@@ -557,6 +557,8 @@ juiz run dist/talker_listener-0.1.0-x86_64-unknown-linux-gnu.juizapp
 # listener_cpp: Hello, Juiz!
 ```
 
+> juiz 0.3.0 から、`juiz associate` を 1 回実行しておくと `.juizapp` をダブルクリックで起動できます。ポートが使われていたときや、依存する基礎につながらないときは、起動した端末で選び直せます。詳しくは公式サイトの [アプリの配布 (.juizapp)](https://openjuiz.github.io/ja/guides/app-package/#ダブルクリックで起動する) を見てください。
+
 `packages/talker_listener/` に置くのはマニフェスト `juizapp.yaml` と設定ファイル `app.conf` だけです。`app.conf` はプラグインを `path: "plugins/{target}"` で参照し、`scripts/make_packages.py` が `build/plugins` のプラグインと `libjuiz_sdk` を `plugins/<この機械のターゲット>/` に写してから `juiz pack --target <ターゲット>` を呼びます。
 プラグインの RPATH は自身の場所 (`$ORIGIN` / `@loader_path`) だけにしてあるので (`cmake/Juiz.cmake`)、隣に置いた `libjuiz_sdk` が使われます。Windows の juiz はプラグインの DLL の隣から `juiz_sdk.dll` を探します。
 タグ (`v*`) を付けると、CI が Linux (x86_64) と Windows (x86_64) で作った `.juizapp` を [Releases](https://github.com/OpenJUIZ/juiz_examples_cpp/releases) に載せます。
